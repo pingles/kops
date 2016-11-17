@@ -39,6 +39,7 @@ type AutoscalingGroup struct {
 	Subnets []*Subnet
 	Tags    map[string]string
 
+	LoadBalancer        *LoadBalancer
 	LaunchConfiguration *LaunchConfiguration
 }
 
@@ -239,6 +240,7 @@ type terraformAutoscalingGroup struct {
 	MaxSize                 *int64               `json:"max_size,omitempty"`
 	MinSize                 *int64               `json:"min_size,omitempty"`
 	VPCZoneIdentifier       []*terraform.Literal `json:"vpc_zone_identifier,omitempty"`
+	LoadBalancers           []*terraform.Literal `json:"load_balancers,omitempty"`
 	Tags                    []*terraformASGTag   `json:"tag,omitempty"`
 }
 
@@ -248,6 +250,9 @@ func (_ *AutoscalingGroup) RenderTerraform(t *terraform.TerraformTarget, a, e, c
 		MinSize:                 e.MinSize,
 		MaxSize:                 e.MaxSize,
 		LaunchConfigurationName: e.LaunchConfiguration.TerraformLink(),
+	}
+	if e.LoadBalancer != nil {
+		tf.LoadBalancers = []*terraform.Literal{e.LoadBalancer.TerraformLink()}
 	}
 
 	for _, s := range e.Subnets {

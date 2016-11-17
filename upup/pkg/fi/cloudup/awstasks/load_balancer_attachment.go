@@ -25,6 +25,7 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/awsup"
+	"k8s.io/kops/upup/pkg/fi/cloudup/terraform"
 )
 
 type LoadBalancerAttachment struct {
@@ -96,6 +97,17 @@ func (s *LoadBalancerAttachment) CheckChanges(a, e, changes *LoadBalancerAttachm
 		}
 	}
 	return nil
+}
+
+type terraformLoadBalancerAttachment struct {
+	ELB      *terraform.Literal `json:"elb,omitempty"`
+	Instance *terraform.Literal `json:"instance,omitempty"`
+}
+
+func (_ *LoadBalancerAttachment) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *LoadBalancerAttachment) error {
+	e.AutoscalingGroup.LoadBalancer = e.LoadBalancer
+	return nil
+	// return t.RenderResource("aws_elb_attachment", *e.Name, tf)
 }
 
 func (_ *LoadBalancerAttachment) RenderAWS(t *awsup.AWSAPITarget, a, e, changes *LoadBalancerAttachment) error {

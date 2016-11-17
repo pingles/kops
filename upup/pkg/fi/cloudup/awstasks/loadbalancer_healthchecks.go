@@ -23,6 +23,7 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/awsup"
+	"k8s.io/kops/upup/pkg/fi/cloudup/terraform"
 )
 
 type LoadBalancerHealthChecks struct {
@@ -81,6 +82,12 @@ func (s *LoadBalancerHealthChecks) CheckChanges(a, e, changes *LoadBalancerHealt
 			return fi.RequiredField("Target")
 		}
 	}
+	return nil
+}
+
+func (_ *LoadBalancerHealthChecks) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *LoadBalancerHealthChecks) error {
+	e.LoadBalancer.HealthChecks = append(e.LoadBalancer.HealthChecks, e)
+	// rendered by LoadBalancer
 	return nil
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/awsup"
+	"k8s.io/kops/upup/pkg/fi/cloudup/terraform"
 	"strconv"
 )
 
@@ -41,6 +42,7 @@ type LoadBalancer struct {
 
 	Subnets        []*Subnet
 	SecurityGroups []*SecurityGroup
+	HealthChecks   []*LoadBalancerHealthChecks
 
 	Listeners map[string]*LoadBalancerListener
 }
@@ -185,6 +187,76 @@ func (s *LoadBalancer) CheckChanges(a, e, changes *LoadBalancer) error {
 		}
 	}
 	return nil
+}
+
+type terraformELB struct {
+	Name           string                     `json:"name,omitempty"`
+	Subnets        []*terraform.Literal       `json:"subnets,omitempty"`
+	SecurityGroups []*terraform.Literal       `json:"securitygroups,omitempty"`
+	Listeners      []*terraformELBListener    `json:"listeners,omitempty"`
+	HealthChecks   []*terraformELBHealthCheck `json:"health_checks,omitempty"`
+}
+
+type terraformELBListener struct {
+	InstancePort     int64  `json:"instance_port,omitempty"`
+	InstanceProtocol string `json:"instance_protocol,omitempty"`
+	LBPort           int64  `json:"lb_port,omitempty"`
+	LBProtocol       string `json:"lb_protocol,omitempty"`
+	SSLCertificateID string `json:"ssl_certificate_id,omitempty"`
+}
+
+type terraformELBHealthCheck struct {
+	HealthyThreshold   int64  `json:"healthy_threshold,omitempty"`
+	UnhealthyThreshold int64  `json:"unhealthy_threshold,omityempty"`
+	Target             string `json:"target,omitempty"`
+	Interval           int64  `json:"interval,omitempty"`
+	Timeout            int64  `json:"timeout,omitempty"`
+}
+
+func (_ *LoadBalancer) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *LoadBalancer) error {
+	tf := &terraformELB{
+		Name: *e.Name,
+	}
+	tf.Subnets = make([]*terraform.Literal, len(e.Subnets))
+	for idx, subnet := range e.Subnets {
+		tf.Subnets[idx] = subnet.TerraformLink()
+	}
+	tf.SecurityGroups = make([]*terraform.Literal, len(e.SecurityGroups))
+	for idx, group := range e.SecurityGroups {
+		tf.SecurityGroups[idx] = group.TerraformLink()
+	}
+	tf.Listeners = []*terraformELBListener{}
+
+	for loadBalancerPort, listener := range e.Listeners {
+		loadBalancerPortInt, err := strconv.ParseInt(loadBalancerPort, 10, 64)
+		if err != nil {
+			return fmt.Errorf("error parsing load balancer listener port: %q", loadBalancerPort)
+		}
+		l := listener.mapToAWS(loadBalancerPortInt)
+		listener := &terraformELBListener{
+			LBPort:           loadBalancerPortInt,
+			LBProtocol:       *l.Protocol,
+			InstancePort:     *l.InstancePort,
+			InstanceProtocol: *l.InstanceProtocol,
+		}
+		tf.Listeners = append(tf.Listeners, listener)
+	}
+	tf.HealthChecks = make([]*terraformELBHealthCheck, len(e.HealthChecks))
+	for idx, check := range e.HealthChecks {
+		tf.HealthChecks[idx] = &terraformELBHealthCheck{
+			HealthyThreshold:   *check.HealthyThreshold,
+			UnhealthyThreshold: *check.UnhealthyThreshold,
+			Target:             *check.Target,
+			Interval:           *check.Interval,
+			Timeout:            *check.Timeout,
+		}
+	}
+
+	return t.RenderResource("aws_elb", *e.Name, tf)
+}
+
+func (e *LoadBalancer) TerraformLink() *terraform.Literal {
+	return terraform.LiteralProperty("aws_elb", *e.Name, "id")
 }
 
 func (_ *LoadBalancer) RenderAWS(t *awsup.AWSAPITarget, a, e, changes *LoadBalancer) error {
