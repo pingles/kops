@@ -86,8 +86,9 @@ func (s *LoadBalancerHealthChecks) CheckChanges(a, e, changes *LoadBalancerHealt
 }
 
 func (_ *LoadBalancerHealthChecks) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *LoadBalancerHealthChecks) error {
-	e.LoadBalancer.HealthChecks = append(e.LoadBalancer.HealthChecks, e)
-	// rendered by LoadBalancer
+	// TODO
+	// Health Checks through Terraform are created on the ELB resource. https://www.terraform.io/docs/providers/aws/r/elb.html#health_check
+	// We'd need to invert association between LoadBalancer and HealthCheck to avoid json stack overflow errors
 	return nil
 }
 

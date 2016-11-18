@@ -99,15 +99,22 @@ func (s *LoadBalancerAttachment) CheckChanges(a, e, changes *LoadBalancerAttachm
 	return nil
 }
 
-type terraformLoadBalancerAttachment struct {
-	ELB      *terraform.Literal `json:"elb,omitempty"`
-	Instance *terraform.Literal `json:"instance,omitempty"`
+type terraformAutoscalingAttachment struct {
+	AutoscalingGroupName *terraform.Literal `json:"autoscaling_group_name,omitempty"`
+	ELB                  *terraform.Literal `json:"elb,omitempty"`
+}
+
+func attachmentName(loadBalancer *LoadBalancer, autoscaleGroup *AutoscalingGroup) string {
+	return fmt.Sprintf("%s-%s", *autoscaleGroup.Name, *loadBalancer.Name)
 }
 
 func (_ *LoadBalancerAttachment) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *LoadBalancerAttachment) error {
-	e.AutoscalingGroup.LoadBalancer = e.LoadBalancer
-	return nil
-	// return t.RenderResource("aws_elb_attachment", *e.Name, tf)
+	glog.V(2).Infof("Creating LoadBalancer Attachment for VPC, assigning LoadBalancer to Autoscale Group")
+	tf := &terraformAutoscalingAttachment{
+		ELB:                  e.LoadBalancer.TerraformLink(),
+		AutoscalingGroupName: e.AutoscalingGroup.TerraformLink(),
+	}
+	return t.RenderResource("aws_autoscaling_attachment", attachmentName(e.LoadBalancer, e.AutoscalingGroup), tf)
 }
 
 func (_ *LoadBalancerAttachment) RenderAWS(t *awsup.AWSAPITarget, a, e, changes *LoadBalancerAttachment) error {

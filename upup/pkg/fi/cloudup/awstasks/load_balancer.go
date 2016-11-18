@@ -42,7 +42,7 @@ type LoadBalancer struct {
 
 	Subnets        []*Subnet
 	SecurityGroups []*SecurityGroup
-	HealthChecks   []*LoadBalancerHealthChecks
+	// HealthChecks   []*LoadBalancerHealthChecks
 
 	Listeners map[string]*LoadBalancerListener
 }
@@ -190,11 +190,10 @@ func (s *LoadBalancer) CheckChanges(a, e, changes *LoadBalancer) error {
 }
 
 type terraformELB struct {
-	Name           string                     `json:"name,omitempty"`
-	Subnets        []*terraform.Literal       `json:"subnets,omitempty"`
-	SecurityGroups []*terraform.Literal       `json:"securitygroups,omitempty"`
-	Listeners      []*terraformELBListener    `json:"listeners,omitempty"`
-	HealthChecks   []*terraformELBHealthCheck `json:"health_checks,omitempty"`
+	Name           string                  `json:"name,omitempty"`
+	Subnets        []*terraform.Literal    `json:"subnets,omitempty"`
+	SecurityGroups []*terraform.Literal    `json:"security_groups,omitempty"`
+	Listeners      []*terraformELBListener `json:"listener,omitempty"`
 }
 
 type terraformELBListener struct {
@@ -214,6 +213,8 @@ type terraformELBHealthCheck struct {
 }
 
 func (_ *LoadBalancer) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *LoadBalancer) error {
+	glog.V(2).Infof("Creating Elastic LoadBalancer for VPC")
+
 	tf := &terraformELB{
 		Name: *e.Name,
 	}
@@ -240,16 +241,6 @@ func (_ *LoadBalancer) RenderTerraform(t *terraform.TerraformTarget, a, e, chang
 			InstanceProtocol: *l.InstanceProtocol,
 		}
 		tf.Listeners = append(tf.Listeners, listener)
-	}
-	tf.HealthChecks = make([]*terraformELBHealthCheck, len(e.HealthChecks))
-	for idx, check := range e.HealthChecks {
-		tf.HealthChecks[idx] = &terraformELBHealthCheck{
-			HealthyThreshold:   *check.HealthyThreshold,
-			UnhealthyThreshold: *check.UnhealthyThreshold,
-			Target:             *check.Target,
-			Interval:           *check.Interval,
-			Timeout:            *check.Timeout,
-		}
 	}
 
 	return t.RenderResource("aws_elb", *e.Name, tf)

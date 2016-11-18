@@ -165,17 +165,19 @@ func (_ *NatGateway) RenderAWS(t *awsup.AWSAPITarget, a, e, changes *NatGateway)
 // TODO Kris - We need to support NGW for Terraform
 
 type terraformNatGateway struct {
-	AllocationId *terraform.Literal `json:"AllocationID,omitempty"`
-	SubnetID     *string            `json:"SubnetID,omitempty"`
+	AllocationId *terraform.Literal `json:"allocation_id,omitempty"`
+	SubnetID     *terraform.Literal `json:"subnet_id,omitempty"`
 }
 
 func (_ *NatGateway) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *NatGateway) error {
+	glog.V(2).Infof("Creating Nat Gateway for VPC")
+
 	tf := &terraformNatGateway{
 		AllocationId: e.ElasticIp.TerraformLink(),
-		SubnetID:     e.Subnet.ID,
+		SubnetID:     e.Subnet.TerraformLink(),
 	}
 
-	return t.RenderResource("aws_natgateway", *e.Name, tf)
+	return t.RenderResource("aws_nat_gateway", *e.Name, tf)
 }
 
 func (e *NatGateway) TerraformLink() *terraform.Literal {
