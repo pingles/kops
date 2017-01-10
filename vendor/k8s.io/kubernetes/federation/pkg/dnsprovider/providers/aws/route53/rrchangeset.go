@@ -19,6 +19,7 @@ package route53
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/golang/glog"
 	"k8s.io/kubernetes/federation/pkg/dnsprovider"
 )
 
@@ -91,6 +92,7 @@ func (c *ResourceRecordChangeset) Apply() error {
 		HostedZoneId: hostedZoneID,
 	}
 
+	glog.V(4).Infof("requesting route53 changes: %+v", request)
 	_, err := service.ChangeResourceRecordSets(request)
 	if err != nil {
 		// Cast err to awserr.Error to get the Code and

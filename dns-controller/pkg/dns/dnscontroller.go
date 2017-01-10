@@ -216,6 +216,7 @@ func (c *DNSController) runOnce() error {
 					RecordType: r.RecordType,
 					FQDN:       r.FQDN,
 				}
+
 				newValueMap[key] = append(newValueMap[key], r.Value)
 				continue
 			}
@@ -414,7 +415,21 @@ func (o *dnsOp) deleteRecords(k recordKey) error {
 	return nil
 }
 
+func uniqueStrings(strings []string) []string {
+	result := map[string]bool{}
+	for _, s := range strings {
+		result[s] = true
+	}
+
+	unique := make([]string, 0)
+	for s, _ := range result {
+		unique = append(unique, s)
+	}
+	return unique
+}
+
 func (o *dnsOp) updateRecords(k recordKey, newRecords []string, ttl int64) error {
+	newRecords = uniqueStrings(newRecords)
 	glog.V(2).Infof("Updating records for %s: %v", k, newRecords)
 
 	fqdn := EnsureDotSuffix(k.FQDN)

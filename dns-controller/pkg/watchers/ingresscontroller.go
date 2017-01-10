@@ -132,6 +132,25 @@ func (c *IngressController) runWatcher(stopCh <-chan struct{}) {
 	}
 }
 
+func preferCNAMEs(records []dns.Record) []dns.Record {
+	var cnames []dns.Record
+	var as []dns.Record
+
+	for _, record := range records {
+		if record.RecordType == dns.RecordTypeCNAME {
+			cnames = append(cnames, record)
+		} else if record.RecordType == dns.RecordTypeA {
+			as = append(as, record)
+		}
+	}
+
+	if len(cnames) > 0 {
+		return cnames
+	}
+
+	return as
+}
+
 func (c *IngressController) updateIngressRecords(ingress *v1beta1.Ingress) {
 	var records []dns.Record
 
@@ -167,5 +186,6 @@ func (c *IngressController) updateIngressRecords(ingress *v1beta1.Ingress) {
 		}
 	}
 
+	records = preferCNAMEs(records)
 	c.scope.Replace(ingress.Name, records)
 }

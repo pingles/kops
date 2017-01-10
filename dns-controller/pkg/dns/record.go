@@ -40,6 +40,30 @@ type Record struct {
 	AliasTarget bool
 }
 
+func (r Record) Equal(other Record) bool {
+	return (r.RecordType == other.RecordType && r.FQDN == other.FQDN && r.Value == other.Value)
+}
+
+func containsRecord(record Record, records []Record) bool {
+	for _, it := range records {
+		if record.Equal(it) {
+			return true
+		}
+	}
+	return false
+}
+
+func UniqueRecords(records []Record) []Record {
+	var results []Record
+	for _, record := range records {
+		if containsRecord(record, results) {
+			continue
+		}
+		results = append(results, record)
+	}
+	return results
+}
+
 // AliasForNodesInRole returns the alias for nodes in the given role
 func AliasForNodesInRole(role, roleType string) string {
 	return "node/role=" + role + "/" + roleType
